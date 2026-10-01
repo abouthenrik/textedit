@@ -222,6 +222,7 @@ function Shell() {
   const [docs, setDocs] = useState<DocSummary[] | undefined>(undefined);
   const [activeId, setActiveId] = useState<string>(() => crypto.randomUUID());
   const [showList, setShowList] = useState(false);
+  const [query, setQuery] = useState("");
   const docsRef = useRef<DocSummary[] | undefined>(undefined);
   useEffect(() => {
     docsRef.current = docs;
@@ -318,6 +319,11 @@ function Shell() {
     [activeId],
   );
 
+  const q = query.trim().toLowerCase();
+  const filteredDocs = (docs ?? []).filter(
+    (d) => !q || d.title.toLowerCase().includes(q) || d.content_text.toLowerCase().includes(q),
+  );
+
   return (
     <div className="shell">
       <aside className={`sidebar ${showList ? "open" : ""}`}>
@@ -330,10 +336,23 @@ function Shell() {
             +
           </button>
         </div>
+        <div className="search-wrap">
+          <input
+            type="search"
+            className="search"
+            placeholder="Sök"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Sök bland anteckningar"
+          />
+        </div>
         <div className="notes">
           {docs === undefined && <div className="notes-empty">Laddar…</div>}
           {docs?.length === 0 && <div className="notes-empty">Inga anteckningar än</div>}
-          {docs?.map((d) => (
+          {docs && docs.length > 0 && filteredDocs.length === 0 && (
+            <div className="notes-empty">Inga träffar på "{query}"</div>
+          )}
+          {filteredDocs.map((d) => (
             <NoteRow
               key={d.id}
               d={d}
