@@ -14,24 +14,48 @@ export interface Doc {
   mode: Mode;
 }
 
-/** Anonym inloggning ger en stabil användare per enhet, så RLS kan låsa dokumentet till ägaren. */
-async function ensureUser() {
-  if (!supabase) return null;
-  const { data } = await supabase.auth.getSession();
-  if (data.session) return data.session.user;
-  const { data: anon, error } = await supabase.auth.signInAnonymously();
-  if (error) throw error;
-  return anon.user;
+export interface DocSummary {
+  id: string;
+  title: string;
+  content_text: string;
+  mode: Mode;
+  updated_at: string;
 }
 
-export async function loadLatest(): Promise<Doc | null> {
+export interface Profile {
+  id: string;
+  email: string | null;
+  approved: boolean;
+  is_admin: boolean;
+}
+
+export async function fetchMyProfile(userId: string): Promise<Profile | null> {
   if (!supabase) return null;
-  await ensureUser();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id,email,approved,is_admin")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as Profile | null;
+}
+
+export async function listDocs(): Promise<DocSummary[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("documents")
+    .select("id,title,content_text,mode,updated_at")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return (data as DocSummary[]) ?? [];
+}
+
+export async function loadDoc(id: string): Promise<Doc | null> {
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from("documents")
     .select("id,title,content_html,content_text,mode")
-    .order("updated_at", { ascending: false })
-    .limit(1)
+    .eq("id", id)
     .maybeSingle();
   if (error) throw error;
   return data as Doc | null;
@@ -39,9 +63,14 @@ export async function loadLatest(): Promise<Doc | null> {
 
 export async function saveDoc(doc: Doc) {
   if (!supabase) throw new Error("Supabase är inte konfigurerat");
-  await ensureUser();
   const { error } = await supabase
     .from("documents")
     .upsert({ ...doc, updated_at: new Date().toISOString() });
+  if (error) throw error;
+}
+
+export async function deleteDoc(id: string) {
+  if (!supabase) return;
+  const { error } = await supabase.from("documents").delete().eq("id", id);
   if (error) throw error;
 }
