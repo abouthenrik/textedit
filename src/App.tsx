@@ -222,6 +222,10 @@ function Shell() {
   const [docs, setDocs] = useState<DocSummary[] | undefined>(undefined);
   const [activeId, setActiveId] = useState<string>(() => crypto.randomUUID());
   const [showList, setShowList] = useState(false);
+  const docsRef = useRef<DocSummary[] | undefined>(undefined);
+  useEffect(() => {
+    docsRef.current = docs;
+  }, [docs]);
 
   useEffect(() => {
     if (!supabase) {
@@ -235,14 +239,16 @@ function Shell() {
 
   const importNote = useCallback(async (text: string, name: string, handle?: FileSystemFileHandle) => {
     if (!supabase) return;
-    const id = crypto.randomUUID();
     const title = name.replace(/\.txt$/i, "") || "Namnlöst";
+    // Samma filnamn delat igen -> uppdatera den anteckningen istället för att skapa en till kopia.
+    const existing = docsRef.current?.find((d) => d.title === title);
+    const id = existing?.id ?? crypto.randomUUID();
     const full: Doc = { id, title, content_html: textToHtml(text), content_text: text, mode: "plain" };
     await saveDoc(full);
     if (handle) fileHandles.set(id, handle);
     setDocs((prev) => [
       { id, title, content_text: text, mode: "plain", updated_at: new Date().toISOString() },
-      ...(prev ?? []),
+      ...(prev ?? []).filter((d) => d.id !== id),
     ]);
     setActiveId(id);
     setShowList(false);
