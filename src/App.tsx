@@ -378,6 +378,7 @@ function Shell() {
               active={d.id === activeId}
               onSelect={() => onSelect(d.id)}
               onDelete={() => onDelete(d.id, true)}
+              onTrash={() => onDelete(d.id)}
             />
           ))}
         </div>
@@ -407,11 +408,13 @@ function NoteRow({
   active,
   onSelect,
   onDelete,
+  onTrash,
 }: {
   d: DocSummary;
   active: boolean;
   onSelect: () => void;
   onDelete: () => void;
+  onTrash: () => void;
 }) {
   const THROW_AWAY = -90;
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -457,29 +460,41 @@ function NoteRow({
   };
 
   return (
-    <button
-      type="button"
-      className={`note-item ${active ? "active" : ""}`}
+    <div
+      className="note-row"
       style={{
         transform: `translateX(${dx}px)`,
         opacity: gone ? 0 : 1,
         transition: dragging ? "none" : "transform .2s ease, opacity .2s ease",
       }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-      onClick={() => {
-        if (!dragging && Math.abs(dx) < 4) onSelect();
-      }}
     >
-      <span className="note-title">{d.title || "Namnlöst"}</span>
-      <span className="note-meta">
-        <span className="note-time">{timeAgo(d.updated_at)}</span>
-        {d.tag && <span className="note-tag">{d.tag}</span>}
-        <span className="note-preview">{(d.content_text || "Tomt").replace(/\s+/g, " ").slice(0, 60)}</span>
-      </span>
-    </button>
+      <button
+        type="button"
+        className={`note-item ${active ? "active" : ""}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onClick={() => {
+          if (!dragging && Math.abs(dx) < 4) onSelect();
+        }}
+      >
+        <span className="note-title">{d.title || "Namnlöst"}</span>
+        <span className="note-meta">
+          <span className="note-time">{timeAgo(d.updated_at)}</span>
+          {d.tag && <span className="note-tag">{d.tag}</span>}
+          <span className="note-preview">{(d.content_text || "Tomt").replace(/\s+/g, " ").slice(0, 60)}</span>
+        </span>
+      </button>
+      {active && (
+        <button type="button" className="note-trash" onClick={onTrash} aria-label="Släng anteckningen" title="Släng">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+          </svg>
+          Släng
+        </button>
+      )}
+    </div>
   );
 }
 
