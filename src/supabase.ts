@@ -71,6 +71,13 @@ export async function saveDoc(doc: Doc) {
   if (error) throw error;
 }
 
+/** Lägg tillbaka en slängd anteckning med sin gamla tid, så den hamnar på samma plats i listan. */
+export async function restoreDoc(doc: Doc, updatedAt: string) {
+  if (!supabase) return;
+  const { error } = await supabase.from("documents").upsert({ ...doc, updated_at: updatedAt });
+  if (error) throw error;
+}
+
 export async function deleteDoc(id: string) {
   if (!supabase) return;
   const { error } = await supabase.from("documents").delete().eq("id", id);

@@ -8,6 +8,7 @@ import {
   fetchMyProfile,
   listDocs,
   loadDoc,
+  restoreDoc,
   saveDoc,
   supabase,
   type Doc,
@@ -320,8 +321,14 @@ function Shell() {
     setDocs((prev) => [summary, ...(prev ?? []).filter((d) => d.id !== summary.id)]);
   }, []);
 
+  // Senast slängda anteckningen, så den kan läggas tillbaka med "Ångra" en kort stund.
+  const [trashed, setTrashed] = useState<{ doc: Doc; summary: DocSummary } | null>(null);
+  const undoTimer = useRef<number | undefined>(undefined);
+
   const onDelete = useCallback(
     async (id: string) => {
+      const summary = docsRef.current?.find((d) => d.id === id);
+      const full = summary ? await loadDoc(id).catch(() => null) : null;
       fileHandles.delete(id);
       await deleteDoc(id);
       setDocs((prev) => (prev ?? []).filter((d) => d.id !== id));
@@ -329,9 +336,28 @@ function Shell() {
         setActiveId(crypto.randomUUID());
         setShowList(false);
       }
+      if (full && summary) {
+        setTrashed({ doc: full, summary });
+        window.clearTimeout(undoTimer.current);
+        undoTimer.current = window.setTimeout(() => setTrashed(null), 6000);
+      }
     },
     [activeId],
   );
+
+  const onUndo = async () => {
+    if (!trashed) return;
+    window.clearTimeout(undoTimer.current);
+    setTrashed(null);
+    await restoreDoc(trashed.doc, trashed.summary.updated_at);
+    setDocs((prev) =>
+      [...(prev ?? []).filter((d) => d.id !== trashed.summary.id), trashed.summary].sort((a, b) =>
+        b.updated_at.localeCompare(a.updated_at),
+      ),
+    );
+    setActiveId(trashed.doc.id);
+    setShowList(false);
+  };
 
   const allTags = [...new Set((docs ?? []).map((d) => d.tag).filter((t): t is string => !!t))].sort((a, b) =>
     a.localeCompare(b, "sv"),
@@ -399,6 +425,14 @@ function Shell() {
           onDelete={() => onDelete(activeId)}
         />
       </div>
+      {trashed && (
+        <div className="undo-toast" role="status">
+          <span>Anteckningen slängd</span>
+          <button type="button" onClick={onUndo}>
+            Ångra
+          </button>
+        </div>
+      )}
     </div>
   );
 }

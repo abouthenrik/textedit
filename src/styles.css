@@ -91,6 +91,10 @@ body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);-webkit-font
 .save-box-icon{font-size:10px;line-height:1}
 
 
+.undo-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:10;display:flex;align-items:center;gap:14px;padding:8px 8px 8px 18px;border-radius:999px;background:var(--fg);color:var(--bg);font:600 13.5px var(--sans);box-shadow:0 4px 16px rgba(0,0,0,.18);animation:toast-in .2s ease}
+.undo-toast button{border:0;border-radius:999px;background:var(--hover);color:#151515;font:700 13.5px var(--sans);padding:7px 16px;cursor:pointer}
+@keyframes toast-in{from{opacity:0;transform:translate(-50%,8px)}}
+
 .auth-loading{display:flex;align-items:center;justify-content:center;height:100%;color:var(--mute);font-size:13px;background:var(--bg)}
 .auth{display:flex;align-items:center;justify-content:center;height:100%;padding:24px;background:var(--bg)}
 .auth-card{display:flex;flex-direction:column;gap:11px;width:100%;max-width:300px;text-align:center;background:var(--card);padding:30px 26px;border:0;border-radius:calc(var(--radius) + 4px);box-shadow:var(--shadow)}
