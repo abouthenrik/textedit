@@ -31,8 +31,8 @@ body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);-webkit-font
 .notes-empty{padding:28px 12px;color:var(--mute);font-size:13px;text-align:center}
 .note-item{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;padding:10px 12px;margin-bottom:2px;border:0;border-radius:var(--radius);background:transparent;color:var(--fg);cursor:pointer}
 .note-item:hover{background:var(--hover)}
-.note-item.active{background:var(--card);box-shadow:var(--shadow)}
-.note-item.active .note-title{color:var(--accent)}
+.note-item.active{background:var(--hover)}
+.note-item.active .note-title{color:var(--fg)}
 .note-title{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .note-meta{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--mute);min-width:0}
 .note-time{flex:none}
