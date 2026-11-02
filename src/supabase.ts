@@ -12,6 +12,7 @@ export interface Doc {
   content_html: string;
   content_text: string;
   mode: Mode;
+  tag: string | null;
 }
 
 export interface DocSummary {
@@ -19,6 +20,7 @@ export interface DocSummary {
   title: string;
   content_text: string;
   mode: Mode;
+  tag: string | null;
   updated_at: string;
 }
 
@@ -44,7 +46,7 @@ export async function listDocs(): Promise<DocSummary[]> {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("documents")
-    .select("id,title,content_text,mode,updated_at")
+    .select("id,title,content_text,mode,tag,updated_at")
     .order("updated_at", { ascending: false });
   if (error) throw error;
   return (data as DocSummary[]) ?? [];
@@ -54,7 +56,7 @@ export async function loadDoc(id: string): Promise<Doc | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("documents")
-    .select("id,title,content_html,content_text,mode")
+    .select("id,title,content_html,content_text,mode,tag")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;

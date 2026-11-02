@@ -62,6 +62,8 @@ body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);-webkit-font
 .seg{display:flex;border:0;border-radius:8px;overflow:hidden;flex:none;background:var(--hover);padding:2px}
 .seg button{border:0;background:transparent;color:var(--mute);font:600 11.5px inherit;padding:5px 12px;border-radius:6px;cursor:pointer}
 .seg button.on{background:var(--card);color:var(--fg);box-shadow:var(--shadow)}
+.tag-select{flex:none;margin-right:8px;border:0;border-radius:8px;background:var(--hover);color:var(--fg);font:600 11.5px var(--sans);padding:7px 10px;cursor:pointer;outline:0;max-width:160px}
+.tag-select:focus-visible{box-shadow:0 0 0 2px var(--accent)}
 
 .page{flex:1;overflow:auto;padding:14px max(24px,calc((100% - 720px)/2)) calc(60px + env(safe-area-inset-bottom))}
 .loading{color:var(--mute);font-size:13px}

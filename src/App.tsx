@@ -25,6 +25,7 @@ const newDoc = (id: string): Doc => ({
   content_html: "",
   content_text: "",
   mode: "plain",
+  tag: null,
 });
 
 const timeAgo = (iso: string) => {
@@ -41,6 +42,14 @@ const textToHtml = (t: string) =>
     .split("\n")
     .map((l) => `<p>${l.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`)
     .join("");
+
+/** Namn från innehållet: första raden med text, högst ca 50 tecken. */
+const titleFromText = (t: string) => {
+  const line = t.split("\n").map((l) => l.replace(/\s+/g, " ").trim()).find(Boolean) ?? "";
+  if (line.length <= 50) return line || "Namnlöst";
+  const cut = line.slice(0, 50);
+  return `${cut.slice(0, cut.lastIndexOf(" ") > 20 ? cut.lastIndexOf(" ") : 50)}…`;
+};
 
 /** Minnas filhandtag (File System Access API) per dokument-id under sessionen, så "spara" kan skriva tillbaka utan att fråga igen. */
 const fileHandles = new Map<string, FileSystemFileHandle>();
@@ -249,11 +258,12 @@ function Shell() {
     // Samma filnamn delat igen -> uppdatera den anteckningen istället för att skapa en till kopia.
     const existing = docsRef.current?.find((d) => d.title === title);
     const id = existing?.id ?? crypto.randomUUID();
-    const full: Doc = { id, title, content_html: textToHtml(text), content_text: text, mode: "plain" };
+    const tag = existing?.tag ?? null;
+    const full: Doc = { id, title, content_html: textToHtml(text), content_text: text, mode: "plain", tag };
     await saveDoc(full);
     if (handle) fileHandles.set(id, handle);
     setDocs((prev) => [
-      { id, title, content_text: text, mode: "plain", updated_at: new Date().toISOString() },
+      { id, title, content_text: text, mode: "plain", tag, updated_at: new Date().toISOString() },
       ...(prev ?? []).filter((d) => d.id !== id),
     ]);
     setActiveId(id);
@@ -324,6 +334,10 @@ function Shell() {
     [activeId],
   );
 
+  const allTags = [...new Set((docs ?? []).map((d) => d.tag).filter((t): t is string => !!t))].sort((a, b) =>
+    a.localeCompare(b, "sv"),
+  );
+
   const q = query.trim().toLowerCase();
   const filteredDocs = (docs ?? []).filter(
     (d) => !q || d.title.toLowerCase().includes(q) || d.content_text.toLowerCase().includes(q),
@@ -377,6 +391,7 @@ function Shell() {
         <Editor
           key={activeId}
           docId={activeId}
+          allTags={allTags}
           onBack={() => setShowList(true)}
           onSaved={onSaved}
           onDelete={() => onDelete(activeId)}
@@ -469,11 +484,13 @@ function NoteRow({
 
 function Editor({
   docId,
+  allTags,
   onBack,
   onSaved,
   onDelete,
 }: {
   docId: string;
+  allTags: string[];
   onBack: () => void;
   onSaved: (s: DocSummary) => void;
   onDelete: () => void;
@@ -483,6 +500,15 @@ function Editor({
   const [mode, setMode] = useState<Mode>("plain");
   const [plain, setPlain] = useState("");
   const [title, setTitle] = useState("Namnlöst");
+  // Så länge man inte själv skrivit en titel följer titeln textens första rad.
+  const autoTitle = useRef(true);
+  const syncAutoTitle = useCallback(() => {
+    if (!autoTitle.current) return;
+    const t = titleFromText(doc.current.content_text);
+    doc.current.title = t;
+    setTitle(t);
+  }, []);
+  const [tag, setTag] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>(supabase ? "idle" : "offline");
   const [ready, setReady] = useState(false);
   const [fileMsg, setFileMsg] = useState("");
@@ -499,6 +525,7 @@ function Editor({
         title: doc.current.title,
         content_text: doc.current.content_text,
         mode: doc.current.mode,
+        tag: doc.current.tag,
         updated_at: new Date().toISOString(),
       });
     } catch {
@@ -519,6 +546,7 @@ function Editor({
     onUpdate: ({ editor }) => {
       doc.current.content_html = editor.getHTML();
       doc.current.content_text = editor.getText({ blockSeparator: "\n" });
+      syncAutoTitle();
       schedule();
     },
   });
@@ -529,7 +557,9 @@ function Editor({
       .then((d) => {
         if (d) {
           doc.current = d;
+          autoTitle.current = d.title === "Namnlöst" || d.title === titleFromText(d.content_text);
           setTitle(d.title);
+          setTag(d.tag);
           setMode(d.mode);
           setPlain(d.content_text);
           editor.commands.setContent(d.content_html, { emitUpdate: false });
@@ -574,14 +604,29 @@ function Editor({
     setPlain(v);
     doc.current.content_text = v;
     doc.current.content_html = textToHtml(v);
+    syncAutoTitle();
     schedule();
   };
 
   const onTitle = (v: string) => {
     setTitle(v);
+    autoTitle.current = !v.trim();
     doc.current.title = v || "Namnlöst";
     schedule();
   };
+
+  const NEW_TAG = "__ny__";
+  const onTag = (v: string) => {
+    let next: string | null = v || null;
+    if (v === NEW_TAG) {
+      next = window.prompt("Namn på ny tagg")?.trim() || null;
+      if (!next) return;
+    }
+    setTag(next);
+    doc.current.tag = next;
+    schedule();
+  };
+  const tagOptions = tag && !allTags.includes(tag) ? [...allTags, tag] : allTags;
 
   const exportLabel: Record<"shared" | "handle" | "download", string> = {
     shared: "Delad ✓",
@@ -656,6 +701,15 @@ function Editor({
           </>
         )}
         <span className="grow" />
+        <select className="tag-select" value={tag ?? ""} onChange={(e) => onTag(e.target.value)} aria-label="Tagg">
+          <option value="">Ingen tagg</option>
+          {tagOptions.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+          <option value={NEW_TAG}>+ Ny tagg…</option>
+        </select>
         <div className="seg" role="group" aria-label="Läge">
           <button className={rich ? "on" : ""} onClick={() => toggle("rich")}>Rich text</button>
           <button className={!rich ? "on" : ""} onClick={() => toggle("plain")}>Ren text</button>
