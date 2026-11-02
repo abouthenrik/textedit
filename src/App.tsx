@@ -476,6 +476,7 @@ function NoteRow({
       <span className="note-title">{d.title || "Namnlöst"}</span>
       <span className="note-meta">
         <span className="note-time">{timeAgo(d.updated_at)}</span>
+        {d.tag && <span className="note-tag">{d.tag}</span>}
         <span className="note-preview">{(d.content_text || "Tomt").replace(/\s+/g, " ").slice(0, 60)}</span>
       </span>
     </button>
@@ -678,10 +679,18 @@ function Editor({
         <button type="button" className="back" onClick={onBack} aria-label="Tillbaka till listan">
           ‹
         </button>
-        <input className="title" value={title} onChange={(e) => onTitle(e.target.value)} aria-label="Titel" />
+        <input
+          className="title"
+          value={title === "Namnlöst" ? "" : title}
+          placeholder="Namnlöst"
+          onChange={(e) => onTitle(e.target.value)}
+          aria-label="Titel"
+        />
         <div className="bar-actions">
           <button type="button" className="icon-btn" onClick={onDelete} aria-label="Ta bort" title="Ta bort">
-            🗑
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+            </svg>
           </button>
           <span className="word-count">{wordCount} ord</span>
         </div>
@@ -731,7 +740,7 @@ function Editor({
           />
         )}
         <div className="save-box-wrap">
-          <button type="button" className="save-box" onClick={onCopy}>
+          <button type="button" className="save-box secondary" onClick={onCopy}>
             {copyMsg || "Kopiera"}
           </button>
           <button type="button" className="save-box" onClick={onExportFile}>
