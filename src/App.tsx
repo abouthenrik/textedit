@@ -481,6 +481,7 @@ function Editor({
   const [status, setStatus] = useState<Status>(supabase ? "idle" : "offline");
   const [ready, setReady] = useState(false);
   const [fileMsg, setFileMsg] = useState("");
+  const [copyMsg, setCopyMsg] = useState("");
 
   const flush = useCallback(async () => {
     if (!supabase) return;
@@ -594,6 +595,17 @@ function Editor({
     }
   };
 
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(doc.current.content_text);
+      setCopyMsg("Kopierad ✓");
+    } catch {
+      setCopyMsg("Kunde inte kopiera");
+    } finally {
+      window.setTimeout(() => setCopyMsg(""), 1800);
+    }
+  };
+
   const rich = mode === "rich";
   const currentText = rich ? (editor?.getText({ blockSeparator: "\n" }) ?? "") : plain;
   const wordCount = currentText.trim() ? currentText.trim().split(/\s+/).length : 0;
@@ -660,6 +672,9 @@ function Editor({
           />
         )}
         <div className="save-box-wrap">
+          <button type="button" className="save-box" onClick={onCopy}>
+            {copyMsg || "Kopiera"}
+          </button>
           <button type="button" className="save-box" onClick={onExportFile}>
             {fileMsg || "Spara"}
             <span className="save-box-icon">▼</span>
