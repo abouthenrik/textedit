@@ -321,8 +321,7 @@ function Shell() {
   }, []);
 
   const onDelete = useCallback(
-    async (id: string, skipConfirm = false) => {
-      if (!skipConfirm && !window.confirm("Ta bort anteckningen?")) return;
+    async (id: string) => {
       fileHandles.delete(id);
       await deleteDoc(id);
       setDocs((prev) => (prev ?? []).filter((d) => d.id !== id));
@@ -379,7 +378,7 @@ function Shell() {
               d={d}
               active={d.id === activeId}
               onSelect={() => onSelect(d.id)}
-              onDelete={() => onDelete(d.id, true)}
+              onDelete={() => onDelete(d.id)}
               onTrash={() => onDelete(d.id)}
             />
           ))}
