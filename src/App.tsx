@@ -809,7 +809,6 @@ function Editor({
           </button>
           <button type="button" className="save-box" onClick={onExportFile}>
             {fileMsg || "Spara"}
-            <span className="save-box-icon">▼</span>
           </button>
         </div>
       </main>
