@@ -86,11 +86,16 @@ async function saveTextToFile(docId: string, title: string, text: string): Promi
 
 /**
  * Dator (File System Access API finns) -> riktig "Spara som"-dialog där man väljer mapp.
+ * Dator utan sådan dialog -> nedladdning (webbläsaren frågar var filen ska sparas om det är påslaget).
  * Mobil (ingen sådan dialog i webbläsaren) -> delningsmenyn ger t.ex. "Spara i Drive" / "Spara i Filer".
  */
 async function saveOrShareText(docId: string, title: string, text: string): Promise<"shared" | "handle" | "download"> {
   const w = window as unknown as { showSaveFilePicker?: unknown };
   if (fileHandles.has(docId) || w.showSaveFilePicker) {
+    return saveTextToFile(docId, title, text);
+  }
+  // Dator utan spara-dialog (t.ex. Brave, Safari) -> vanlig nedladdning, inte Apples delningsmeny.
+  if (!window.matchMedia("(pointer: coarse)").matches) {
     return saveTextToFile(docId, title, text);
   }
   const filename = `${title || "Namnlöst"}.txt`;
