@@ -321,6 +321,10 @@ function Shell() {
     setDocs((prev) => [summary, ...(prev ?? []).filter((d) => d.id !== summary.id)]);
   }, []);
 
+  const onEmptied = useCallback((id: string) => {
+    setDocs((prev) => (prev ?? []).filter((d) => d.id !== id));
+  }, []);
+
   // Senast slängda anteckningen, så den kan läggas tillbaka med "Ångra" en kort stund.
   const [trashed, setTrashed] = useState<{ doc: Doc; summary: DocSummary } | null>(null);
   const undoTimer = useRef<number | undefined>(undefined);
@@ -422,6 +426,7 @@ function Shell() {
           allTags={allTags}
           onBack={() => setShowList(true)}
           onSaved={onSaved}
+          onEmptied={onEmptied}
           onDelete={() => onDelete(activeId)}
         />
       </div>
@@ -538,12 +543,14 @@ function Editor({
   allTags,
   onBack,
   onSaved,
+  onEmptied,
   onDelete,
 }: {
   docId: string;
   allTags: string[];
   onBack: () => void;
   onSaved: (s: DocSummary) => void;
+  onEmptied: (id: string) => void;
   onDelete: () => void;
 }) {
   const doc = useRef<Doc>(newDoc(docId));
@@ -569,6 +576,13 @@ function Editor({
     if (!supabase) return;
     setStatus("saving");
     try {
+      // Tom anteckning (ingen text) sparas inte – och tas bort om den redan fanns sparad.
+      if (!doc.current.content_text.trim()) {
+        await deleteDoc(doc.current.id);
+        setStatus("idle");
+        onEmptied(doc.current.id);
+        return;
+      }
       await saveDoc({ ...doc.current });
       setStatus("saved");
       onSaved({
@@ -582,7 +596,7 @@ function Editor({
     } catch {
       setStatus("error");
     }
-  }, [onSaved]);
+  }, [onSaved, onEmptied]);
 
   const schedule = useCallback(() => {
     if (!supabase) return;
@@ -759,7 +773,7 @@ function Editor({
             {btn("1.", editor?.isActive("orderedList"), () => c()?.toggleOrderedList().run())}
           </>
         )}
-        <span className="grow" />
+        {rich && <span className="sep" />}
         <select className="tag-select" value={tag ?? ""} onChange={(e) => onTag(e.target.value)} aria-label="Tagg">
           <option value="">Ingen tagg</option>
           {tagOptions.map((t) => (
