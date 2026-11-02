@@ -1,4 +1,4 @@
-:root{--bg:#fffccc;--card:#fffccc;--fg:#151515;--mute:#6b7079;--line:#b3e7fa;--hover:#b3e7fa;--accent:#33bef2;--accent-soft:#e3f6fd;--accent-fg:#151515;--destructive:#c2412d;--shadow:0 1px 2px rgba(0,0,0,.04),0 1px 3px rgba(0,0,0,.08);--sans:"Manrope",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;--brand:"Baloo 2",var(--sans);--radius:.625rem}
+:root{--bg:#fffccc;--card:#fffccc;--fg:#151515;--mute:#6b7079;--line:#b3e7fa;--hover:#b3e7fa;--accent:#33bef2;--accent-soft:#e3f6fd;--accent-fg:#151515;--destructive:#c2412d;--shadow:0 1px 2px rgba(0,0,0,.04),0 1px 3px rgba(0,0,0,.08);--sans:"Manrope",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;--brand:"Baloo 2",var(--sans);--head:"Inter Tight",var(--sans);--radius:.625rem}
 @media(prefers-color-scheme:dark){:root{--bg:#141518;--card:#1d1f23;--fg:#f2f2f2;--mute:#98989d;--line:rgba(255,255,255,.1);--hover:rgba(255,255,255,.07);--accent:#33bef2;--accent-soft:rgba(51,190,242,.14);--accent-fg:#0a0a0a;--destructive:#e5604a;--shadow:0 1px 2px rgba(0,0,0,.3),0 1px 3px rgba(0,0,0,.4)}}
 *{box-sizing:border-box}
 *{scrollbar-color:var(--hover) transparent}
@@ -52,7 +52,7 @@ body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans);-webkit-font
 .win{display:flex;flex-direction:column;height:100%;background:var(--card);border-left:1px solid var(--line);padding-top:env(safe-area-inset-top)}
 .bar{display:flex;align-items:center;gap:10px;padding:26px max(24px,calc((100% - 720px)/2)) 8px}
 .back{display:none;flex:none;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--accent);font:400 22px/1 var(--sans);cursor:pointer}
-.title{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font:800 26px/1.25 var(--sans);letter-spacing:-.01em;outline:0;padding:0}
+.title{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font:700 28px/1.2 var(--head);letter-spacing:-.025em;outline:0;padding:0}
 .title::placeholder{color:var(--mute);opacity:.6}
 .status{flex:none;font-size:11.5px;color:var(--mute);white-space:nowrap}
 .status.error{color:var(--destructive)}
