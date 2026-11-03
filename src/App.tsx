@@ -592,6 +592,23 @@ function Editor({
   const [status, setStatus] = useState<Status>(supabase ? "idle" : "offline");
   const [ready, setReady] = useState(false);
   const [fileMsg, setFileMsg] = useState("");
+  const [showChars, setShowChars] = useState(() => {
+    try {
+      return localStorage.getItem("count") === "chars";
+    } catch {
+      return false;
+    }
+  });
+  const toggleCount = () => {
+    setShowChars((v) => {
+      try {
+        localStorage.setItem("count", v ? "words" : "chars");
+      } catch {
+        // spelar ingen roll om valet inte kan sparas
+      }
+      return !v;
+    });
+  };
   const [copyMsg, setCopyMsg] = useState("");
 
   const flush = useCallback(async () => {
@@ -780,9 +797,14 @@ function Editor({
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
             </svg>
           </button>
-          <span className="word-count">
-            {wordCount.toLocaleString("sv-SE")} ord · {charCount.toLocaleString("sv-SE")} tecken
-          </span>
+          <button
+            type="button"
+            className="word-count"
+            onClick={toggleCount}
+            title={showChars ? "Visa antal ord" : "Visa antal tecken"}
+          >
+            {showChars ? `${charCount.toLocaleString("sv-SE")} tecken` : `${wordCount.toLocaleString("sv-SE")} ord`}
+          </button>
         </div>
       </header>
       <div className="toolbar">
