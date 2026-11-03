@@ -238,6 +238,7 @@ function Shell() {
   const [activeId, setActiveId] = useState<string>(() => crypto.randomUUID());
   const [showList, setShowList] = useState(false);
   const [query, setQuery] = useState("");
+  const [tagFilter, setTagFilter] = useState("");
   const docsRef = useRef<DocSummary[] | undefined>(undefined);
   useEffect(() => {
     docsRef.current = docs;
@@ -368,8 +369,14 @@ function Shell() {
   );
 
   const q = query.trim().toLowerCase();
+  const activeTag = allTags.includes(tagFilter) ? tagFilter : "";
   const filteredDocs = (docs ?? []).filter(
-    (d) => !q || d.title.toLowerCase().includes(q) || d.content_text.toLowerCase().includes(q),
+    (d) =>
+      (!activeTag || d.tag === activeTag) &&
+      (!q ||
+        d.title.toLowerCase().includes(q) ||
+        d.content_text.toLowerCase().includes(q) ||
+        !!d.tag?.toLowerCase().includes(q)),
   );
 
   return (
@@ -395,12 +402,27 @@ function Shell() {
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Sök bland anteckningar"
           />
+          {allTags.length > 0 && (
+            <select
+              className={`search-tag ${activeTag ? "on" : ""}`}
+              value={activeTag}
+              onChange={(e) => setTagFilter(e.target.value)}
+              aria-label="Visa bara anteckningar med tagg"
+            >
+              <option value="">Alla taggar</option>
+              {allTags.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="notes">
           {docs === undefined && <div className="notes-empty">Laddar…</div>}
           {docs?.length === 0 && <div className="notes-empty">Inga anteckningar än</div>}
           {docs && docs.length > 0 && filteredDocs.length === 0 && (
-            <div className="notes-empty">Inga träffar på "{query}"</div>
+            <div className="notes-empty">{q ? `Inga träffar på "${query}"` : "Inga anteckningar med den taggen"}</div>
           )}
           {filteredDocs.map((d) => (
             <NoteRow
