@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import type { Session } from "@supabase/supabase-js";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -126,6 +134,69 @@ async function saveOrShareText(docId: string, title: string, text: string): Prom
   return saveTextToFile(docId, title, text);
 }
 
+/** Egen rullgardinsmeny – till skillnad från <select> märks det när man väljer samma sak igen (då avmarkeras den). */
+function PickMenu({
+  className,
+  label,
+  on,
+  ariaLabel,
+  children,
+}: {
+  className: string;
+  label: string;
+  on: boolean;
+  ariaLabel: string;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className={`pick ${className}-wrap`} ref={wrap}>
+      <button
+        type="button"
+        className={`${className} ${on ? "on" : ""}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+      >
+        {label}
+      </button>
+      {open && (
+        <div className="pick-menu" role="menu">
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PickItem({ selected, onClick, children }: { selected?: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" role="menuitemradio" aria-checked={!!selected} className={selected ? "sel" : ""} onClick={onClick}>
+      <span className="pick-check">{selected ? "✓" : ""}</span>
+      {children}
+    </button>
+  );
+}
+
 export function App() {
   const [session, setSession] = useState<Session | null | undefined>(supabase ? undefined : null);
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
@@ -241,6 +312,7 @@ function Shell() {
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const docsRef = useRef<DocSummary[] | undefined>(undefined);
+  const picked = useRef(false);
   useEffect(() => {
     docsRef.current = docs;
   }, [docs]);
@@ -251,7 +323,11 @@ function Shell() {
       return;
     }
     listDocs()
-      .then(setDocs)
+      .then((list) => {
+        setDocs(list);
+        // Öppna den senaste anteckningen i stället för en tom sida (om man inte redan valt något).
+        if (list.length > 0 && !picked.current) setActiveId(list[0].id);
+      })
       .catch(() => setDocs([]));
   }, []);
 
@@ -269,6 +345,7 @@ function Shell() {
       { id, title, content_text: text, mode: "plain", tag, updated_at: new Date().toISOString() },
       ...(prev ?? []).filter((d) => d.id !== id),
     ]);
+    picked.current = true;
     setActiveId(id);
     setShowList(false);
   }, []);
@@ -310,11 +387,13 @@ function Shell() {
   }, [importNote]);
 
   const onNew = () => {
+    picked.current = true;
     setActiveId(crypto.randomUUID());
     setShowList(false);
   };
 
   const onSelect = (id: string) => {
+    picked.current = true;
     setActiveId(id);
     setShowList(false);
   };
@@ -344,7 +423,9 @@ function Shell() {
       await deleteDoc(id);
       setDocs((prev) => (prev ?? []).filter((d) => d.id !== id));
       if (id === activeId) {
-        setActiveId(crypto.randomUUID());
+        // Visa nästa senaste anteckning, inte en tom sida.
+        const next = docsRef.current?.find((d) => d.id !== id);
+        setActiveId(next?.id ?? crypto.randomUUID());
         setShowList(false);
       }
       if (full && summary) {
@@ -409,19 +490,27 @@ function Shell() {
             aria-label="Sök bland anteckningar"
           />
           {allTags.length > 0 && (
-            <select
-              className={`search-tag ${activeTag ? "on" : ""}`}
-              value={activeTag}
-              onChange={(e) => setTagFilter(e.target.value)}
-              aria-label="Visa bara anteckningar med tagg"
+            <PickMenu
+              className="search-tag"
+              label={activeTag || "Alla taggar"}
+              on={!!activeTag}
+              ariaLabel="Visa bara anteckningar med tagg"
             >
-              <option value="">Alla taggar</option>
-              {allTags.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              {(close) =>
+                allTags.map((t) => (
+                  <PickItem
+                    key={t}
+                    selected={t === activeTag}
+                    onClick={() => {
+                      setTagFilter(t === activeTag ? "" : t);
+                      close();
+                    }}
+                  >
+                    {t}
+                  </PickItem>
+                ))
+              }
+            </PickMenu>
           )}
         </div>
         <div className="notes">
@@ -728,31 +817,29 @@ function Editor({
     schedule();
   };
 
-  const NEW_TAG = "__ny__";
-  const RENAME_TAG = "__byt__";
-  const onTag = async (v: string) => {
-    if (v === RENAME_TAG) {
-      if (!tag) return;
-      const to = window.prompt(`Nytt namn på taggen "${tag}"`, tag)?.trim();
-      if (!to || to === tag) return;
-      // Spara eventuella osparade ändringar först, så den gamla taggen inte skrivs tillbaka efteråt.
-      doc.current.tag = to;
-      setTag(to);
-      try {
-        await onRenameTag(tag, to);
-      } catch {
-        setStatus("error");
-      }
-      schedule();
-      return;
-    }
-    let next: string | null = v || null;
-    if (v === NEW_TAG) {
-      next = window.prompt("Namn på ny tagg")?.trim() || null;
-      if (!next) return;
-    }
+  const setDocTag = (next: string | null) => {
     setTag(next);
     doc.current.tag = next;
+    schedule();
+  };
+  // Samma tagg vald igen -> taggen tas bort från anteckningen.
+  const pickTag = (t: string) => setDocTag(t === tag ? null : t);
+  const newTag = () => {
+    const next = window.prompt("Namn på ny tagg")?.trim();
+    if (next) setDocTag(next);
+  };
+  const renameCurrentTag = async () => {
+    if (!tag) return;
+    const to = window.prompt(`Nytt namn på taggen "${tag}"`, tag)?.trim();
+    if (!to || to === tag) return;
+    // Byt även i den öppna anteckningen, så den gamla taggen inte sparas tillbaka efteråt.
+    doc.current.tag = to;
+    setTag(to);
+    try {
+      await onRenameTag(tag, to);
+    } catch {
+      setStatus("error");
+    }
     schedule();
   };
   const tagOptions = tag && !allTags.includes(tag) ? [...allTags, tag] : allTags;
@@ -927,16 +1014,43 @@ function Editor({
           </>
         )}
         {rich && <span className="sep" />}
-        <select className="tag-select" value={tag ?? ""} onChange={(e) => void onTag(e.target.value)} aria-label="Tagg">
-          <option value="">Ingen tagg</option>
-          {tagOptions.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-          <option value={NEW_TAG}>+ Ny tagg…</option>
-          {tag && <option value={RENAME_TAG}>Byt namn på "{tag}"…</option>}
-        </select>
+        <PickMenu className="tag-select" label={tag ?? "Ingen tagg"} on={!!tag} ariaLabel="Tagg">
+          {(close) => (
+            <>
+              {tagOptions.map((t) => (
+                <PickItem
+                  key={t}
+                  selected={t === tag}
+                  onClick={() => {
+                    pickTag(t);
+                    close();
+                  }}
+                >
+                  {t}
+                </PickItem>
+              ))}
+              {tagOptions.length > 0 && <div className="pick-sep" />}
+              <PickItem
+                onClick={() => {
+                  close();
+                  newTag();
+                }}
+              >
+                + Ny tagg…
+              </PickItem>
+              {tag && (
+                <PickItem
+                  onClick={() => {
+                    close();
+                    void renameCurrentTag();
+                  }}
+                >
+                  Byt namn på "{tag}"…
+                </PickItem>
+              )}
+            </>
+          )}
+        </PickMenu>
         <div className="seg" role="group" aria-label="Läge">
           <button className={rich ? "on" : ""} onClick={() => toggle("rich")}>Rich text</button>
           <button className={!rich ? "on" : ""} onClick={() => toggle("plain")}>Ren text</button>
