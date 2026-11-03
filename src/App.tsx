@@ -766,11 +766,48 @@ function Editor({
     window.open(url, "_blank", "noopener");
   };
 
-  const onShare = () => {
-    const mobile = window.matchMedia("(pointer: coarse)").matches;
-    if (mobile && canShareFile()) void shareAsFile();
-    else setShareOpen((v) => !v);
+  // PDF med titeln som rubrik och texten radbruten över så många sidor som behövs.
+  const shareAsPdf = async () => {
+    setShareOpen(false);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ unit: "mm", format: "a4" });
+      const margin = 20;
+      const width = pdf.internal.pageSize.getWidth() - margin * 2;
+      const bottom = pdf.internal.pageSize.getHeight() - margin;
+      let y = margin + 4;
+      pdf.setFont("helvetica", "bold").setFontSize(18);
+      for (const line of pdf.splitTextToSize(doc.current.title || "Namnlöst", width) as string[]) {
+        pdf.text(line, margin, y);
+        y += 8;
+      }
+      y += 4;
+      pdf.setFont("helvetica", "normal").setFontSize(11.5);
+      for (const line of pdf.splitTextToSize(doc.current.content_text, width) as string[]) {
+        if (y > bottom) {
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += 6;
+      }
+      const name = `${doc.current.title || "Namnlöst"}.pdf`;
+      const file = new File([pdf.output("blob")], name, { type: "application/pdf" });
+      const nav = navigator as Navigator & { canShare?: (data?: { files?: File[] }) => boolean };
+      if (window.matchMedia("(pointer: coarse)").matches && nav.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: doc.current.title });
+      } else {
+        pdf.save(name);
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        setShareMsg("Kunde inte göra PDF");
+        window.setTimeout(() => setShareMsg(""), 1800);
+      }
+    }
   };
+
+  const onShare = () => setShareOpen((v) => !v);
 
   useEffect(() => {
     if (!shareOpen) return;
@@ -917,6 +954,10 @@ function Editor({
                     <small>Mail, AirDrop, Meddelanden …</small>
                   </button>
                 )}
+                <button type="button" role="menuitem" onClick={shareAsPdf}>
+                  Spara som PDF
+                  <small>Rubrik och text på A4</small>
+                </button>
               </div>
             )}
           </div>
