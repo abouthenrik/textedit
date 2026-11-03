@@ -738,6 +738,49 @@ function Editor({
     download: "Nedladdad",
   };
 
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareMsg, setShareMsg] = useState("");
+  const txtFile = () => new File([doc.current.content_text], `${doc.current.title || "Namnlöst"}.txt`, { type: "text/plain" });
+  const canShareFile = () => {
+    const nav = navigator as Navigator & { canShare?: (data?: { files?: File[] }) => boolean };
+    return !!nav.canShare?.({ files: [txtFile()] });
+  };
+
+  // Delningsmenyn med .txt-filen bifogad (mobil: t.ex. Gmail-appen, Mac: Mail, AirDrop, Meddelanden).
+  const shareAsFile = async () => {
+    setShareOpen(false);
+    try {
+      await navigator.share({ files: [txtFile()], title: doc.current.title });
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        setShareMsg("Kunde inte dela");
+        window.setTimeout(() => setShareMsg(""), 1800);
+      }
+    }
+  };
+
+  // Gmail i webbläsaren: nytt mejl med titeln som ämne och texten i mejlet (filer kan inte bifogas via länk).
+  const shareToGmail = () => {
+    setShareOpen(false);
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(doc.current.title)}&body=${encodeURIComponent(doc.current.content_text)}`;
+    window.open(url, "_blank", "noopener");
+  };
+
+  const onShare = () => {
+    const mobile = window.matchMedia("(pointer: coarse)").matches;
+    if (mobile && canShareFile()) void shareAsFile();
+    else setShareOpen((v) => !v);
+  };
+
+  useEffect(() => {
+    if (!shareOpen) return;
+    const close = (e: PointerEvent) => {
+      if (!(e.target as HTMLElement).closest(".share")) setShareOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [shareOpen]);
+
   const onExportFile = async () => {
     try {
       const kind = await saveOrShareText(docId, doc.current.title, doc.current.content_text);
@@ -858,6 +901,25 @@ function Editor({
           <button type="button" className="save-box" onClick={onExportFile}>
             {fileMsg || "Spara"}
           </button>
+          <div className="share">
+            <button type="button" className="save-box" onClick={onShare} aria-expanded={shareOpen}>
+              {shareMsg || "Dela"}
+            </button>
+            {shareOpen && (
+              <div className="share-menu" role="menu">
+                <button type="button" role="menuitem" onClick={shareToGmail}>
+                  Gmail
+                  <small>Texten i ett nytt mejl</small>
+                </button>
+                {canShareFile() && (
+                  <button type="button" role="menuitem" onClick={shareAsFile}>
+                    Som .txt-fil
+                    <small>Mail, AirDrop, Meddelanden …</small>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>
