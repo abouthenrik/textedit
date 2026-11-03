@@ -746,6 +746,8 @@ function Editor({
   const rich = mode === "rich";
   const currentText = rich ? (editor?.getText({ blockSeparator: "\n" }) ?? "") : plain;
   const wordCount = currentText.trim() ? currentText.trim().split(/\s+/).length : 0;
+  // Tecken inklusive mellanslag, som i Word (radbrytningar räknas inte).
+  const charCount = [...currentText.replace(/\n/g, "")].length;
   const btn = (label: string, active: boolean | undefined, run: () => void, cls = "") => (
     <button
       type="button"
@@ -778,7 +780,9 @@ function Editor({
               <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
             </svg>
           </button>
-          <span className="word-count">{wordCount} ord</span>
+          <span className="word-count">
+            {wordCount.toLocaleString("sv-SE")} ord · {charCount.toLocaleString("sv-SE")} tecken
+          </span>
         </div>
       </header>
       <div className="toolbar">
