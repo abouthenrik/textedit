@@ -878,30 +878,50 @@ function Editor({
     window.open(url, "_blank", "noopener");
   };
 
-  // PDF med titeln som rubrik och texten radbruten över så många sidor som behövs.
+  // PDF: A4, 4,5 cm marginal på båda sidor, rubrik, datum, brödtext i Times och sidnummer längst ner.
   const shareAsPdf = async () => {
     setShareOpen(false);
     try {
       const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF({ unit: "mm", format: "a4" });
-      const margin = 20;
-      const width = pdf.internal.pageSize.getWidth() - margin * 2;
-      const bottom = pdf.internal.pageSize.getHeight() - margin;
-      let y = margin + 4;
-      pdf.setFont("helvetica", "bold").setFontSize(18);
+      const side = 45;
+      const top = 32;
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const width = pageW - side * 2;
+      const bottom = pageH - 30;
+      let y = top;
+
+      pdf.setFont("helvetica", "bold").setFontSize(20).setTextColor(21, 21, 21);
       for (const line of pdf.splitTextToSize(doc.current.title || "Namnlöst", width) as string[]) {
-        pdf.text(line, margin, y);
-        y += 8;
+        pdf.text(line, side, y);
+        y += 8.5;
       }
-      y += 4;
-      pdf.setFont("helvetica", "normal").setFontSize(11.5);
+      y -= 2;
+      pdf.setFont("helvetica", "normal").setFontSize(9).setTextColor(130, 130, 130);
+      pdf.text(new Date().toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" }), side, y + 4);
+      y += 9;
+      pdf.setDrawColor(210, 210, 210).setLineWidth(0.2).line(side, y, pageW - side, y);
+      y += 11;
+
+      pdf.setFont("times", "normal").setFontSize(12).setTextColor(30, 30, 30);
+      const lineH = 6.2;
       for (const line of pdf.splitTextToSize(doc.current.content_text, width) as string[]) {
         if (y > bottom) {
           pdf.addPage();
-          y = margin;
+          y = top;
         }
-        pdf.text(line, margin, y);
-        y += 6;
+        if (line.trim()) pdf.text(line, side, y);
+        y += line.trim() ? lineH : lineH * 0.75;
+      }
+
+      const pages = pdf.getNumberOfPages();
+      if (pages > 1) {
+        pdf.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(150, 150, 150);
+        for (let n = 1; n <= pages; n++) {
+          pdf.setPage(n);
+          pdf.text(`${n} / ${pages}`, pageW / 2, pageH - 16, { align: "center" });
+        }
       }
       const name = `${doc.current.title || "Namnlöst"}.pdf`;
       const file = new File([pdf.output("blob")], name, { type: "application/pdf" });
