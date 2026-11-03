@@ -8,6 +8,7 @@ import {
   fetchMyProfile,
   listDocs,
   loadDoc,
+  renameTag,
   restoreDoc,
   saveDoc,
   supabase,
@@ -322,6 +323,11 @@ function Shell() {
     setDocs((prev) => [summary, ...(prev ?? []).filter((d) => d.id !== summary.id)]);
   }, []);
 
+  const onRenameTag = useCallback(async (from: string, to: string) => {
+    await renameTag(from, to);
+    setDocs((prev) => (prev ?? []).map((d) => (d.tag === from ? { ...d, tag: to } : d)));
+  }, []);
+
   const onEmptied = useCallback((id: string) => {
     setDocs((prev) => (prev ?? []).filter((d) => d.id !== id));
   }, []);
@@ -449,6 +455,7 @@ function Shell() {
           onBack={() => setShowList(true)}
           onSaved={onSaved}
           onEmptied={onEmptied}
+          onRenameTag={onRenameTag}
           onDelete={() => onDelete(activeId)}
         />
       </div>
@@ -566,6 +573,7 @@ function Editor({
   onBack,
   onSaved,
   onEmptied,
+  onRenameTag,
   onDelete,
 }: {
   docId: string;
@@ -573,6 +581,7 @@ function Editor({
   onBack: () => void;
   onSaved: (s: DocSummary) => void;
   onEmptied: (id: string) => void;
+  onRenameTag: (from: string, to: string) => Promise<void>;
   onDelete: () => void;
 }) {
   const doc = useRef<Doc>(newDoc(docId));
@@ -720,7 +729,23 @@ function Editor({
   };
 
   const NEW_TAG = "__ny__";
-  const onTag = (v: string) => {
+  const RENAME_TAG = "__byt__";
+  const onTag = async (v: string) => {
+    if (v === RENAME_TAG) {
+      if (!tag) return;
+      const to = window.prompt(`Nytt namn på taggen "${tag}"`, tag)?.trim();
+      if (!to || to === tag) return;
+      // Spara eventuella osparade ändringar först, så den gamla taggen inte skrivs tillbaka efteråt.
+      doc.current.tag = to;
+      setTag(to);
+      try {
+        await onRenameTag(tag, to);
+      } catch {
+        setStatus("error");
+      }
+      schedule();
+      return;
+    }
     let next: string | null = v || null;
     if (v === NEW_TAG) {
       next = window.prompt("Namn på ny tagg")?.trim() || null;
@@ -902,7 +927,7 @@ function Editor({
           </>
         )}
         {rich && <span className="sep" />}
-        <select className="tag-select" value={tag ?? ""} onChange={(e) => onTag(e.target.value)} aria-label="Tagg">
+        <select className="tag-select" value={tag ?? ""} onChange={(e) => void onTag(e.target.value)} aria-label="Tagg">
           <option value="">Ingen tagg</option>
           {tagOptions.map((t) => (
             <option key={t} value={t}>
@@ -910,6 +935,7 @@ function Editor({
             </option>
           ))}
           <option value={NEW_TAG}>+ Ny tagg…</option>
+          {tag && <option value={RENAME_TAG}>Byt namn på "{tag}"…</option>}
         </select>
         <div className="seg" role="group" aria-label="Läge">
           <button className={rich ? "on" : ""} onClick={() => toggle("rich")}>Rich text</button>

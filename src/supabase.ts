@@ -78,6 +78,13 @@ export async function restoreDoc(doc: Doc, updatedAt: string) {
   if (error) throw error;
 }
 
+/** Byt namn på en tagg i alla anteckningar som har den. */
+export async function renameTag(from: string, to: string) {
+  if (!supabase) return;
+  const { error } = await supabase.from("documents").update({ tag: to }).eq("tag", from);
+  if (error) throw error;
+}
+
 export async function deleteDoc(id: string) {
   if (!supabase) return;
   const { error } = await supabase.from("documents").delete().eq("id", id);
