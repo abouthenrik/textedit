@@ -1113,6 +1113,9 @@ function Editor({
               </div>
             )}
           </div>
+          <button type="button" className="save-box secondary" onClick={onDelete}>
+            Släng
+          </button>
         </div>
       </main>
     </div>
