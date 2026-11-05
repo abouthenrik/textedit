@@ -312,7 +312,6 @@ function Shell() {
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState("");
   const docsRef = useRef<DocSummary[] | undefined>(undefined);
-  const picked = useRef(false);
   useEffect(() => {
     docsRef.current = docs;
   }, [docs]);
@@ -323,11 +322,7 @@ function Shell() {
       return;
     }
     listDocs()
-      .then((list) => {
-        setDocs(list);
-        // Öppna den senaste anteckningen i stället för en tom sida (om man inte redan valt något).
-        if (list.length > 0 && !picked.current) setActiveId(list[0].id);
-      })
+      .then(setDocs)
       .catch(() => setDocs([]));
   }, []);
 
@@ -345,7 +340,6 @@ function Shell() {
       { id, title, content_text: text, mode: "plain", tag, updated_at: new Date().toISOString() },
       ...(prev ?? []).filter((d) => d.id !== id),
     ]);
-    picked.current = true;
     setActiveId(id);
     setShowList(false);
   }, []);
@@ -387,13 +381,11 @@ function Shell() {
   }, [importNote]);
 
   const onNew = () => {
-    picked.current = true;
     setActiveId(crypto.randomUUID());
     setShowList(false);
   };
 
   const onSelect = (id: string) => {
-    picked.current = true;
     setActiveId(id);
     setShowList(false);
   };
