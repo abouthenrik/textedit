@@ -996,11 +996,6 @@ function Editor({
           aria-label="Titel"
         />
         <div className="bar-actions">
-          <button type="button" className="icon-btn" onClick={onDelete} aria-label="Ta bort" title="Ta bort">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
-            </svg>
-          </button>
           <button
             type="button"
             className="word-count"
@@ -1011,6 +1006,40 @@ function Editor({
           </button>
         </div>
       </header>
+      <div className="save-box-wrap">
+        <button type="button" className="save-box secondary" onClick={onCopy}>
+          {copyMsg || "Kopiera"}
+        </button>
+        <button type="button" className="save-box" onClick={onExportFile}>
+          {fileMsg || "Spara"}
+        </button>
+        <div className="share">
+          <button type="button" className="save-box" onClick={onShare} aria-expanded={shareOpen}>
+            {shareMsg || "Dela"}
+          </button>
+          {shareOpen && (
+            <div className="share-menu" role="menu">
+              <button type="button" role="menuitem" onClick={shareToGmail}>
+                Gmail
+                <small>Texten i ett nytt mejl</small>
+              </button>
+              {canShareFile() && (
+                <button type="button" role="menuitem" onClick={shareAsFile}>
+                  Som .txt-fil
+                  <small>Mail, AirDrop, Meddelanden …</small>
+                </button>
+              )}
+              <button type="button" role="menuitem" onClick={shareAsPdf}>
+                Spara som PDF
+                <small>Rubrik och text på A4</small>
+              </button>
+            </div>
+          )}
+        </div>
+        <button type="button" className="save-box secondary" onClick={onDelete}>
+          Släng
+        </button>
+      </div>
       <div className="toolbar">
         {rich && (
           <>
@@ -1083,40 +1112,6 @@ function Editor({
             autoFocus
           />
         )}
-        <div className="save-box-wrap">
-          <button type="button" className="save-box secondary" onClick={onCopy}>
-            {copyMsg || "Kopiera"}
-          </button>
-          <button type="button" className="save-box" onClick={onExportFile}>
-            {fileMsg || "Spara"}
-          </button>
-          <div className="share">
-            <button type="button" className="save-box" onClick={onShare} aria-expanded={shareOpen}>
-              {shareMsg || "Dela"}
-            </button>
-            {shareOpen && (
-              <div className="share-menu" role="menu">
-                <button type="button" role="menuitem" onClick={shareToGmail}>
-                  Gmail
-                  <small>Texten i ett nytt mejl</small>
-                </button>
-                {canShareFile() && (
-                  <button type="button" role="menuitem" onClick={shareAsFile}>
-                    Som .txt-fil
-                    <small>Mail, AirDrop, Meddelanden …</small>
-                  </button>
-                )}
-                <button type="button" role="menuitem" onClick={shareAsPdf}>
-                  Spara som PDF
-                  <small>Rubrik och text på A4</small>
-                </button>
-              </div>
-            )}
-          </div>
-          <button type="button" className="save-box secondary" onClick={onDelete}>
-            Släng
-          </button>
-        </div>
       </main>
     </div>
   );
