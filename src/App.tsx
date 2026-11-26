@@ -1029,8 +1029,10 @@ function Editor({
   return (
     <div className="win">
       <header className="bar">
-        <button type="button" className="back" onClick={onBack} aria-label="Tillbaka till listan">
-          ‹
+        <button type="button" className="back" onClick={onBack} aria-label="Tillbaka till listan" title="Alla texter">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7" />
+          </svg>
         </button>
         <input
           className="title"
