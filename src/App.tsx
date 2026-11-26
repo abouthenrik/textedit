@@ -845,6 +845,33 @@ function Editor({
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMsg, setShareMsg] = useState("");
 
+  // ElevenReader: telefonens delningsmeny med texten, välj ElevenReader där och lyssna.
+  // Väldigt långa texter skickas som .txt-fil i stället, eftersom delningsmenyn inte klarar hur mycket text som helst.
+  // Dator utan delningsmeny: texten kopieras så den kan klistras in i ElevenReader.
+  const shareToElevenReader = async () => {
+    setShareOpen(false);
+    const title = doc.current.title || "Namnlöst";
+    const text = doc.current.content_text;
+    const flash = (m: string) => {
+      setShareMsg(m);
+      window.setTimeout(() => setShareMsg(""), 2400);
+    };
+    try {
+      const nav = navigator as Navigator & { canShare?: (data?: ShareData) => boolean };
+      const file = new File([text], `${title}.txt`, { type: "text/plain" });
+      if (text.length > 50000 && nav.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title });
+      } else if (navigator.share) {
+        await navigator.share({ title, text: `${title}\n\n${text}` });
+      } else {
+        await navigator.clipboard.writeText(`${title}\n\n${text}`);
+        flash("Kopierad – klistra in i ElevenReader");
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") flash("Kunde inte dela");
+    }
+  };
+
   // Gmail i webbläsaren: nytt mejl med titeln som ämne och texten i mejlet (filer kan inte bifogas via länk).
   const shareToGmail = () => {
     setShareOpen(false);
@@ -1012,6 +1039,10 @@ function Editor({
               <button type="button" role="menuitem" onClick={shareAsPdf}>
                 Som PDF
                 <small>Rubrik och text på A4</small>
+              </button>
+              <button type="button" role="menuitem" onClick={shareToElevenReader}>
+                Lyssna i ElevenReader
+                <small>Välj ElevenReader i delningsmenyn</small>
               </button>
               <button type="button" role="menuitem" onClick={shareToGmail}>
                 Skicka med Gmail
