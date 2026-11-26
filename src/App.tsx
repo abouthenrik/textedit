@@ -700,6 +700,8 @@ function Editor({
     });
   };
   const [copyMsg, setCopyMsg] = useState("");
+  const [pasteMsg, setPasteMsg] = useState("");
+  const plainRef = useRef<HTMLTextAreaElement>(null);
 
   const flush = useCallback(async () => {
     if (!supabase) return;
@@ -962,6 +964,39 @@ function Editor({
     }
   };
 
+  // Klistra in det som ligger i urklipp där markören står (ersätter markerad text).
+  const onPaste = async () => {
+    const flash = (m: string) => {
+      setPasteMsg(m);
+      window.setTimeout(() => setPasteMsg(""), 2400);
+    };
+    let text = "";
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      flash("Fick inte läsa urklipp");
+      return;
+    }
+    if (!text) {
+      flash("Urklipp är tomt");
+      return;
+    }
+    if (mode === "rich") {
+      editor?.chain().focus().insertContent(textToHtml(text)).run();
+    } else {
+      const ta = plainRef.current;
+      const from = ta?.selectionStart ?? plain.length;
+      const to = ta?.selectionEnd ?? plain.length;
+      onPlain(plain.slice(0, from) + text + plain.slice(to));
+      requestAnimationFrame(() => {
+        if (!ta) return;
+        ta.focus();
+        ta.setSelectionRange(from + text.length, from + text.length);
+      });
+    }
+    flash("Inklistrad ✓");
+  };
+
   const onCopy = async () => {
     try {
       await navigator.clipboard.writeText(doc.current.content_text);
@@ -1018,6 +1053,9 @@ function Editor({
       <div className="save-box-wrap">
         <button type="button" className="save-box secondary" onClick={onCopy}>
           {copyMsg || "Kopiera"}
+        </button>
+        <button type="button" className="save-box secondary" onMouseDown={(e) => e.preventDefault()} onClick={onPaste}>
+          {pasteMsg || "Klistra in"}
         </button>
         <div className="share">
           <button type="button" className="save-box" onClick={onShare} aria-expanded={shareOpen}>
@@ -1119,6 +1157,7 @@ function Editor({
         </div>
         {!rich && (
           <textarea
+            ref={plainRef}
             className="plain"
             value={plain}
             onChange={(e) => onPlain(e.target.value)}
